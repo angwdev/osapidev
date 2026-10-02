@@ -1,43 +1,70 @@
 <div align="center">
-  <a href="https://hoppscotch.io">
-    <img
-      src="https://avatars.githubusercontent.com/u/56705483"
-      alt="Hoppscotch"
-      height="64"
-    />
-  </a>
-  <h3>
-    <b>
-      Hoppscotch
-    </b>
-  </h3>
-  <b>
-    Open Source API Development Ecosystem
-  </b>
-  <p>
-
-[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen?logo=github)](CODE_OF_CONDUCT.md) [![Website](https://img.shields.io/website?url=https%3A%2F%2Fhoppscotch.io&logo=hoppscotch)](https://hoppscotch.io) [![Tests](https://github.com/hoppscotch/hoppscotch/actions/workflows/tests.yml/badge.svg)](https://github.com/hoppscotch/hoppscotch/actions) [![Tweet](https://img.shields.io/twitter/url?url=https%3A%2F%2Fhoppscotch.io%2F)](https://x.com/share?text=%F0%9F%91%BD%20Hoppscotch%20%E2%80%A2%20Open%20source%20API%20development%20ecosystem%20-%20Helps%20you%20create%20requests%20faster,%20saving%20precious%20time%20on%20development.&url=https://hoppscotch.io&hashtags=hoppscotch&via=hoppscotch_io)
-
-  </p>
-  <p>
-    <sub>
-      Built with ❤︎ by
-      <a href="https://github.com/hoppscotch/hoppscotch/graphs/contributors">
-        contributors
-      </a>
-    </sub>
-  </p>
-  <br />
-  <p>
-    <a href="https://hoppscotch.io">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="./packages/hoppscotch-common/public/images/banner-dark.png">
-        <source media="(prefers-color-scheme: light)" srcset="./packages/hoppscotch-common/public/images/banner-light.png">
-        <img alt="Hoppscotch" src="./packages/hoppscotch-common/public/images/banner-dark.png">
-      </picture>
-    </a>
-  </p>
+  <img src="./packages/hoppscotch-common/public/logo.svg" alt="osapidev" height="64" />
+  <h3><b>osapidev</b></h3>
+  <b>Open Source API Development Ecosystem</b>
+  <br /><br />
+  <img alt="osapidev" src="./packages/hoppscotch-common/public/banner.png" width="640" />
 </div>
+
+> osapidev is a rebranded distribution of [Hoppscotch](https://github.com/hoppscotch/hoppscotch) Community Edition (MIT licensed).
+> It ships as a single All-in-One (AIO) container: app, admin dashboard and backend.
+
+## osapidev AIO container
+
+The image is built by [`.github/workflows/osapidev-aio-ghcr.yml`](.github/workflows/osapidev-aio-ghcr.yml) and published to GitHub Container Registry as `ghcr.io/angwdev/osapidev` (`linux/amd64` and `linux/arm64`).
+
+| Event | Tags |
+| --- | --- |
+| Push to `main` | `latest`, `main`, `sha-<short>` |
+| Git tag `v1.2.3` / `1.2.3` | `1.2.3`, `1.2` |
+| Manual run (Actions → *Run workflow*) | branch name, `sha-<short>` |
+
+### Run it
+
+```sh
+cp .env.example .env          # set DATA_ENCRYPTION_KEY (32 chars) and your public URLs
+docker compose -f docker-compose.osapidev.yml up -d osapidev-db
+
+# apply database migrations (first run and after every upgrade)
+docker compose -f docker-compose.osapidev.yml run --rm --entrypoint sh osapidev -c "pnpx prisma migrate deploy"
+
+docker compose -f docker-compose.osapidev.yml up -d
+```
+
+- App: http://localhost:3000
+- Admin dashboard: http://localhost:3100
+- Backend API: http://localhost:3170
+
+Pin a version with `OSAPIDEV_VERSION=1.2.3 docker compose -f docker-compose.osapidev.yml up -d`.
+
+### Single sign-on (OpenID Connect)
+
+osapidev can sign users in through any OpenID Connect provider (Okta, Keycloak, Microsoft Entra ID, Auth0, Authentik, Google Workspace, …).
+
+1. In your identity provider, create a confidential **web** client using the authorization code flow, and register this redirect URI:
+   `<VITE_BACKEND_API_URL>/auth/oidc/callback` (for example `http://localhost:3170/v1/auth/oidc/callback`).
+2. In the admin dashboard, open **Settings → Auth providers**, enable **OpenID Connect (SSO)** and fill in:
+   - **Issuer URL**: the issuer from your provider, which must serve `<issuer>/.well-known/openid-configuration` (for example `https://keycloak.example.com/realms/acme`)
+   - **Client ID** and **Client secret**
+   - **Callback URL**: pre-filled; it must match the redirect URI registered in step 1
+   - **Scope**: `openid,email,profile` (default)
+3. Save. The server restarts, and **Continue with SSO** appears on the app and admin login pages.
+
+Users are matched to existing accounts by email. Logins are refused when the provider marks the email as unverified (`email_verified: false`). If the issuer can't be reached when the server starts, SSO login returns `503 auth/oidc_provider_unavailable` (the reason is in the server log) and every other login method keeps working.
+
+### Teams, shared collections and roles
+
+Team workspaces, shared team collections, requests and environments, and per-team roles (**Owner**, **Editor**, **Viewer**, enforced by the server) are built in. Create teams from the app's workspace switcher, or manage them under **Teams** in the admin dashboard.
+
+### Build locally
+
+```sh
+docker build -f prod.Dockerfile --target aio -t osapidev:local .
+```
+
+---
+
+## Upstream documentation
 
 _We highly recommend you take a look at the [**Hoppscotch Documentation**](https://docs.hoppscotch.io) to learn more about the app._
 
