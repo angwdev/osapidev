@@ -28,7 +28,12 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { InfraConfigModule } from './infra-config/infra-config.module';
-import { loadInfraConfiguration } from './infra-config/helper';
+import {
+  DEFAULT_RATE_LIMIT_MAX,
+  DEFAULT_RATE_LIMIT_TTL,
+  loadInfraConfiguration,
+  toPositiveInt,
+} from './infra-config/helper';
 import { MailerModule } from './mailer/mailer.module';
 import { PostHogModule } from './posthog/posthog.module';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -121,8 +126,14 @@ type SubscriptionSocketExtra = {
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => [
         {
-          ttl: +configService.get('INFRA.RATE_LIMIT_TTL'),
-          limit: +configService.get('INFRA.RATE_LIMIT_MAX'),
+          ttl: toPositiveInt(
+            configService.get('INFRA.RATE_LIMIT_TTL'),
+            DEFAULT_RATE_LIMIT_TTL,
+          ),
+          limit: toPositiveInt(
+            configService.get('INFRA.RATE_LIMIT_MAX'),
+            DEFAULT_RATE_LIMIT_MAX,
+          ),
         },
       ],
     }),

@@ -12,6 +12,19 @@ export enum ServiceStatus {
   DISABLE = 'DISABLE',
 }
 
+export const DEFAULT_RATE_LIMIT_TTL = 10000; // in milliseconds (10 seconds)
+export const DEFAULT_RATE_LIMIT_MAX = 100; // requests per IP per RATE_LIMIT_TTL
+
+/**
+ * Parses a numeric InfraConfig value, falling back when it is missing or not a
+ * positive integer. On first boot the infra_config table is still empty when
+ * modules are configured, and the throttler rejects every request on NaN.
+ */
+export function toPositiveInt(value: unknown, fallback: number): number {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : fallback;
+}
+
 /**
  * Configs that can also be set from environment variables of the same name.
  * The env value is applied on first boot and whenever it changes; edits made in
@@ -205,12 +218,12 @@ export async function getDefaultInfraConfigs(): Promise<DefaultInfraConfig[]> {
     },
     {
       name: InfraConfigEnum.RATE_LIMIT_TTL,
-      value: '10000', // in milliseconds (10 seconds)
+      value: DEFAULT_RATE_LIMIT_TTL.toString(),
       isEncrypted: false,
     },
     {
       name: InfraConfigEnum.RATE_LIMIT_MAX,
-      value: '100', // 100 requests per IP per RATE_LIMIT_TTL
+      value: DEFAULT_RATE_LIMIT_MAX.toString(),
       isEncrypted: false,
     },
     {
