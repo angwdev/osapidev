@@ -3,8 +3,8 @@
 #   cp .env.example .env              # then edit secrets / URLs
 #   docker compose -f docker-compose.osapidev.yml up -d
 #
-# First run (and after each upgrade) apply database migrations:
-#   docker compose -f docker-compose.osapidev.yml run --rm --entrypoint sh osapidev -c "pnpm exec prisma migrate deploy"
+# Database migrations run automatically (osapidev-migrate) before osapidev starts.
+# For a production deployment with HTTPS and single sign-on, see deploy/traefik-authentik.
 
 services:
   osapidev:
@@ -16,14 +16,26 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-testpass}@osapidev-db:5432/osapidev
     depends_on:
-      osapidev-db:
-        condition: service_healthy
+      osapidev-migrate:
+        condition: service_completed_successfully
     ports:
       - "3000:3000" # app
       - "3100:3100" # admin dashboard
       - "3170:3170" # backend API
       - "3200:3200" # webapp bundle server (desktop app)
       - "3080:${HOPP_ALTERNATE_PORT:-80}" # subpath mode
+
+  # Applies database migrations, then exits (runs on every `up`)
+  osapidev-migrate:
+    image: ghcr.io/angwdev/osapidev:${OSAPIDEV_VERSION:-latest}
+    restart: "no"
+    working_dir: /dist/backend
+    entrypoint: ["pnpm", "exec", "prisma", "migrate", "deploy"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-testpass}@osapidev-db:5432/osapidev
+    depends_on:
+      osapidev-db:
+        condition: service_healthy
 
   osapidev-db:
     image: postgres:15

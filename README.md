@@ -19,17 +19,26 @@ The image is built by [`.github/workflows/osapidev-aio-ghcr.yml`](.github/workfl
 | Git tag `v1.2.3` / `1.2.3` | `1.2.3`, `1.2` |
 | Manual run (Actions → *Run workflow*) | branch name, `sha-<short>` |
 
-### Run it
+### Deploy to production (Traefik + Authentik)
+
+[`deploy/traefik-authentik`](deploy/traefik-authentik) is a complete Docker Compose stack: Traefik for HTTPS with Let's Encrypt, Authentik for single sign-on, and osapidev with its database. Everything is configured from one `.env` file, and Authentik's OIDC application for osapidev is created automatically.
 
 ```sh
-cp .env.example .env          # set DATA_ENCRYPTION_KEY (32 chars) and your public URLs
-docker compose -f docker-compose.osapidev.yml up -d osapidev-db
+cd deploy/traefik-authentik
+cp .env.example .env          # domains, secrets, Authentik admin password
+docker compose up -d
+```
 
-# apply database migrations (first run and after every upgrade)
-docker compose -f docker-compose.osapidev.yml run --rm --entrypoint sh osapidev -c "pnpm exec prisma migrate deploy"
+Then sign in at `https://<OSAPIDEV_HOST>/admin` with **Continue with SSO**; the first account to sign in becomes the osapidev admin. See the [deployment guide](deploy/traefik-authentik/README.md) for the full walkthrough, upgrades and backups.
 
+### Try it locally
+
+```sh
+cp .env.example .env          # set DATA_ENCRYPTION_KEY (32 chars)
 docker compose -f docker-compose.osapidev.yml up -d
 ```
+
+Database migrations run automatically before osapidev starts.
 
 - App: http://localhost:3000
 - Admin dashboard: http://localhost:3100
@@ -49,6 +58,8 @@ osapidev can sign users in through any OpenID Connect provider (Okta, Keycloak, 
    - **Callback URL**: pre-filled; it must match the redirect URI registered in step 1
    - **Scope**: `openid,email,profile` (default)
 3. Save. The server restarts, and **Continue with SSO** appears on the app and admin login pages.
+
+You can also set these from the environment instead of the dashboard: `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_CALLBACK_URL`, `OIDC_SCOPE`, plus `VITE_ALLOWED_AUTH_PROVIDERS=OIDC` to enable it, which also skips the first-run setup wizard. They're applied on first start and whenever they change; dashboard edits are kept until the variable changes. The [Traefik + Authentik stack](deploy/traefik-authentik) configures SSO this way.
 
 Users are matched to existing accounts by email. Logins are refused when the provider marks the email as unverified (`email_verified: false`). If the issuer can't be reached when the server starts, SSO login returns `503 auth/oidc_provider_unavailable` (the reason is in the server log) and every other login method keeps working.
 

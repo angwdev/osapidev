@@ -1,0 +1,196 @@
+# osapidev behind Traefik (HTTPS via Let's Encrypt) with Authentik as the single sign-on provider.
+#
+#   cp .env.example .env    # fill in every value marked "required"
+#   docker compose up -d
+#
+# See README.md in this directory for the full walkthrough.
+
+name: osapidev
+
+x-authentik-env: &authentik-env
+  AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY is required}
+  AUTHENTIK_POSTGRESQL__HOST: authentik-db
+  AUTHENTIK_POSTGRESQL__NAME: authentik
+  AUTHENTIK_POSTGRESQL__USER: authentik
+  AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_DB_PASSWORD:?AUTHENTIK_DB_PASSWORD is required}
+  # First admin ("akadmin"); skips the interactive initial-setup flow
+  AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_ADMIN_EMAIL:?AUTHENTIK_ADMIN_EMAIL is required}
+  AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_ADMIN_PASSWORD:?AUTHENTIK_ADMIN_PASSWORD is required}
+  # Read by authentik-blueprints/osapidev.yaml to create the osapidev OIDC application
+  OSAPIDEV_HOST: ${OSAPIDEV_HOST:?OSAPIDEV_HOST is required}
+  OSAPIDEV_OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?OIDC_CLIENT_ID is required}
+  OSAPIDEV_OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?OIDC_CLIENT_SECRET is required}
+
+x-osapidev-image: &osapidev-image ghcr.io/angwdev/osapidev:${OSAPIDEV_VERSION:-latest}
+x-osapidev-db-url: &osapidev-db-url postgresql://osapidev:${OSAPIDEV_DB_PASSWORD:?OSAPIDEV_DB_PASSWORD is required}@osapidev-db:5432/osapidev
+
+services:
+  traefik:
+    image: traefik:${TRAEFIK_TAG:-v3.7.13}
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=osapidev-proxy
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls.certresolver=letsencrypt
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:?ACME_EMAIL is required}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    networks:
+      proxy:
+        # The osapidev backend calls Authentik (discovery, token exchange) by its
+        # public URL. Resolving that name to Traefik inside the network avoids
+        # depending on hairpin NAT, and the request still uses the real certificate.
+        aliases:
+          - ${AUTHENTIK_HOST:?AUTHENTIK_HOST is required}
+
+  authentik-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: authentik
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: ${AUTHENTIK_DB_PASSWORD:?AUTHENTIK_DB_PASSWORD is required}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d authentik -U authentik"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    volumes:
+      - authentik-db:/var/lib/postgresql/data
+    networks:
+      - authentik
+
+  authentik-server:
+    image: ghcr.io/goauthentik/server:${AUTHENTIK_TAG:-2026.8.3}
+    restart: unless-stopped
+    command: server
+    shm_size: 512mb
+    environment: *authentik-env
+    depends_on:
+      authentik-db:
+        condition: service_healthy
+    volumes:
+      - authentik-data:/data
+      - ./authentik-blueprints:/blueprints/custom:ro
+    networks:
+      - authentik
+      - proxy
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.authentik.rule: Host(`${AUTHENTIK_HOST}`)
+      traefik.http.routers.authentik.entrypoints: websecure
+      traefik.http.services.authentik.loadbalancer.server.port: "9000"
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:${AUTHENTIK_TAG:-2026.8.3}
+    restart: unless-stopped
+    command: worker
+    shm_size: 512mb
+    environment: *authentik-env
+    depends_on:
+      authentik-db:
+        condition: service_healthy
+    volumes:
+      - authentik-data:/data
+      - ./authentik-blueprints:/blueprints/custom:ro
+    networks:
+      - authentik
+
+  osapidev-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: osapidev
+      POSTGRES_USER: osapidev
+      POSTGRES_PASSWORD: ${OSAPIDEV_DB_PASSWORD:?OSAPIDEV_DB_PASSWORD is required}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d osapidev -U osapidev"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    volumes:
+      - osapidev-db:/var/lib/postgresql/data
+    networks:
+      - osapidev
+
+  # Applies database migrations, then exits. Runs on every `up`, so upgrades
+  # migrate automatically before the new version starts.
+  osapidev-migrate:
+    image: *osapidev-image
+    restart: "no"
+    working_dir: /dist/backend
+    entrypoint: ["pnpm", "exec", "prisma", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: *osapidev-db-url
+    depends_on:
+      osapidev-db:
+        condition: service_healthy
+    networks:
+      - osapidev
+
+  osapidev:
+    image: *osapidev-image
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: *osapidev-db-url
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?DATA_ENCRYPTION_KEY (32 characters) is required}
+      TRUST_PROXY: "true"
+      # One hostname: app at /, admin dashboard at /admin, API at /backend
+      ENABLE_SUBPATH_BASED_ACCESS: "true"
+      VITE_BASE_URL: https://${OSAPIDEV_HOST}
+      VITE_SHORTCODE_BASE_URL: https://${OSAPIDEV_HOST}
+      VITE_ADMIN_URL: https://${OSAPIDEV_HOST}/admin
+      VITE_BACKEND_GQL_URL: https://${OSAPIDEV_HOST}/backend/graphql
+      VITE_BACKEND_WS_URL: wss://${OSAPIDEV_HOST}/backend/graphql
+      VITE_BACKEND_API_URL: https://${OSAPIDEV_HOST}/backend/v1
+      WHITELISTED_ORIGINS: https://${OSAPIDEV_HOST},https://${OSAPIDEV_HOST}/admin
+      VITE_APP_TOS_LINK: ${VITE_APP_TOS_LINK:-}
+      VITE_APP_PRIVACY_POLICY_LINK: ${VITE_APP_PRIVACY_POLICY_LINK:-}
+      # Single sign-on through Authentik (applied on first start and whenever these change)
+      VITE_ALLOWED_AUTH_PROVIDERS: ${OSAPIDEV_AUTH_PROVIDERS:-OIDC}
+      OIDC_ISSUER: https://${AUTHENTIK_HOST}/application/o/osapidev/
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?OIDC_CLIENT_ID is required}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?OIDC_CLIENT_SECRET is required}
+      OIDC_CALLBACK_URL: https://${OSAPIDEV_HOST}/backend/v1/auth/oidc/callback
+      OIDC_SCOPE: openid,email,profile
+    depends_on:
+      osapidev-migrate:
+        condition: service_completed_successfully
+      # OIDC discovery runs at startup, so Authentik must be serving first
+      authentik-server:
+        condition: service_healthy
+      traefik:
+        condition: service_started
+    networks:
+      - osapidev
+      - proxy
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.osapidev.rule: Host(`${OSAPIDEV_HOST}`)
+      traefik.http.routers.osapidev.entrypoints: websecure
+      traefik.http.services.osapidev.loadbalancer.server.port: "80"
+
+networks:
+  proxy:
+    name: osapidev-proxy
+  authentik:
+  osapidev:
+
+volumes:
+  letsencrypt:
+  authentik-db:
+  authentik-data:
+  osapidev-db:

@@ -12,7 +12,20 @@ export enum ServiceStatus {
   DISABLE = 'DISABLE',
 }
 
-const SYNC_ONLY_VARIABLES = [InfraConfigEnum.PROXY_APP_URL];
+/**
+ * Configs that can also be set from environment variables of the same name.
+ * The env value is applied on first boot and whenever it changes; edits made in
+ * the admin dashboard are kept until the env value changes again.
+ */
+const SYNC_ONLY_VARIABLES = [
+  InfraConfigEnum.PROXY_APP_URL,
+  InfraConfigEnum.VITE_ALLOWED_AUTH_PROVIDERS,
+  InfraConfigEnum.OIDC_ISSUER,
+  InfraConfigEnum.OIDC_CLIENT_ID,
+  InfraConfigEnum.OIDC_CLIENT_SECRET,
+  InfraConfigEnum.OIDC_CALLBACK_URL,
+  InfraConfigEnum.OIDC_SCOPE,
+];
 
 type DefaultInfraConfig = {
   name: InfraConfigEnum;
