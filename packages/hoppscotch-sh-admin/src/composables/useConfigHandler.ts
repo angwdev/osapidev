@@ -18,6 +18,7 @@ import {
   UpdateInfraConfigsMutation,
 } from '~/helpers/backend/graphql';
 import {
+  ACCESS_CONFIGS,
   ALL_CONFIGS,
   CUSTOM_MAIL_CONFIGS,
   ConfigTransform,
@@ -208,6 +209,12 @@ export function useConfigHandler(updatedConfigs?: ServerConfigs) {
             config.value === 'ENABLE'
         ),
       },
+      accessConfigs: {
+        name: 'access',
+        fields: {
+          require_login: getFieldValue(InfraConfigEnum.RequireLogin) === 'true',
+        },
+      },
       rateLimitConfigs: {
         name: 'rate_limit',
         fields: {
@@ -296,6 +303,11 @@ export function useConfigHandler(updatedConfigs?: ServerConfigs) {
         config: CUSTOM_MAIL_CONFIGS,
         enabled: isCustomMailConfigEnabled,
         fields: customMailConfigFields,
+      },
+      {
+        config: ACCESS_CONFIGS,
+        enabled: true,
+        fields: updatedConfigs?.accessConfigs?.fields,
       },
       {
         config: MOCK_SERVER_CONFIGS,

@@ -137,6 +137,8 @@ export class InfraConfigService implements OnModuleInit, OnModuleDestroy {
         await Promise.allSettled(dbOperations);
       }
 
+      await this.completeOnboardingIfProvidersConfigured();
+
       // Restart the app if needed. Metadata-only sync writes (where `value`
       // is undefined because only `lastSyncedEnvFileValue` is being persisted)
       // don't change runtime config, so they shouldn't trigger a restart.
@@ -162,6 +164,37 @@ export class InfraConfigService implements OnModuleInit, OnModuleDestroy {
         console.error(error);
         throwErr(error);
       }
+    }
+  }
+
+  /**
+   * Marks first-run onboarding as done once login providers are configured.
+   * Providers can come from the environment (VITE_ALLOWED_AUTH_PROVIDERS) rather
+   * than the setup wizard; without this the admin dashboard would keep asking
+   * for the wizard even though sign-in already works.
+   */
+  private async completeOnboardingIfProvidersConfigured() {
+    const configs = await this.prisma.infraConfig.findMany({
+      where: {
+        name: {
+          in: [
+            InfraConfigEnum.VITE_ALLOWED_AUTH_PROVIDERS,
+            InfraConfigEnum.ONBOARDING_COMPLETED,
+          ],
+        },
+      },
+    });
+    const valueOf = (name: InfraConfigEnum) =>
+      configs.find((config) => config.name === name)?.value;
+
+    if (
+      valueOf(InfraConfigEnum.VITE_ALLOWED_AUTH_PROVIDERS) &&
+      valueOf(InfraConfigEnum.ONBOARDING_COMPLETED) !== 'true'
+    ) {
+      await this.prisma.infraConfig.update({
+        where: { name: InfraConfigEnum.ONBOARDING_COMPLETED },
+        data: { value: 'true' },
+      });
     }
   }
 
@@ -508,6 +541,14 @@ export class InfraConfigService implements OnModuleInit, OnModuleDestroy {
    * Get allowed auth providers for login/signup
    * @returns string[]
    */
+  /**
+   * Whether visitors must sign in before using the app
+   * @returns boolean
+   */
+  isLoginRequired() {
+    return this.configService.get<string>('INFRA.REQUIRE_LOGIN') === 'true';
+  }
+
   getAllowedAuthProviders() {
     return (
       this.configService
@@ -770,6 +811,7 @@ export class InfraConfigService implements OnModuleInit, OnModuleDestroy {
         case InfraConfigEnum.MAILER_SMTP_SECURE:
         case InfraConfigEnum.MAILER_TLS_REJECT_UNAUTHORIZED:
         case InfraConfigEnum.MAILER_SMTP_IGNORE_TLS:
+        case InfraConfigEnum.REQUIRE_LOGIN:
           if (value !== 'true' && value !== 'false') return fail();
           break;
 

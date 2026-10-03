@@ -64,7 +64,8 @@ Follow progress with `docker compose ps` and `docker compose logs -f osapidev`.
    Under **Directory → Users**, create accounts for your team. Each user needs an email address, which osapidev uses to identify the account.
 2. Open `https://OSAPIDEV_HOST/admin` and choose **Continue with SSO**.
    **The first account to sign in to the admin dashboard becomes the osapidev admin**, so do this yourself first.
-3. Everyone else signs in at `https://OSAPIDEV_HOST` with **Continue with SSO**.
+3. Everyone else just opens `https://OSAPIDEV_HOST`. Sign-in is required (`OSAPIDEV_REQUIRE_LOGIN=true`), so visitors go straight to Authentik's sign-in page and come back signed in.
+   After signing out of osapidev they see a **Sign in to continue** page instead of being signed straight back in.
 
 To limit who can use osapidev, open **Applications → osapidev** in Authentik and bind a group or user policy to it.
 
@@ -93,9 +94,11 @@ Also keep a copy of `.env`. Without `DATA_ENCRYPTION_KEY`, the secrets in the os
 
 ## How sign-in is wired
 
-- osapidev reads its SSO settings (`OIDC_*` and `VITE_ALLOWED_AUTH_PROVIDERS`) from the environment
+- osapidev reads its SSO settings (`OIDC_*`, `VITE_ALLOWED_AUTH_PROVIDERS` and `REQUIRE_LOGIN`) from the environment
   on first start and whenever they change. Edits made in the admin dashboard under
   **Settings → Auth providers** are kept until you change the matching variable in `.env`.
+- With sign-in required, share links (`/r/...`) only open for signed-in users. Published documentation
+  (`/view/...`) stays public, since publishing is an explicit share.
 - osapidev matches users by email and refuses emails the identity provider marks as unverified.
   Authentik's built-in `email` scope always says "unverified". The blueprint replaces it with
   a scope that reports an email as verified only when the user **cannot change it themselves**.

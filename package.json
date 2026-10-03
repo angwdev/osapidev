@@ -80,6 +80,13 @@
       "prisma",
       "vue-demi"
     ],
+    "packageExtensions": {
+      "@shopify/lang-jsonc@1.0.1": {
+        "peerDependencies": {
+          "@codemirror/language": "^6.0.0"
+        }
+      }
+    },
     "peerDependencyRules": {
       "allowedVersions": {
         "@graphql-yoga/nestjs>@nestjs/common": "12",

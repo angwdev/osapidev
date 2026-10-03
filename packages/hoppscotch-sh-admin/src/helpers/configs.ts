@@ -91,6 +91,13 @@ export type ServerConfigs = {
     enabled: boolean;
   };
 
+  accessConfigs: {
+    name: string;
+    fields: {
+      require_login: boolean;
+    };
+  };
+
   dataSharingConfigs: {
     name: string;
     enabled: boolean;
@@ -310,6 +317,13 @@ const DATA_SHARING_CONFIGS: Omit<Config, 'key'>[] = [
   },
 ];
 
+export const ACCESS_CONFIGS: Config[] = [
+  {
+    name: InfraConfigEnum.RequireLogin,
+    key: 'require_login',
+  },
+];
+
 export const HISTORY_STORE_CONFIG: Config[] = [
   {
     name: InfraConfigEnum.UserHistoryStoreEnabled,
@@ -398,6 +412,7 @@ export const ALL_CONFIGS = [
   CUSTOM_MAIL_CONFIGS,
   DATA_SHARING_CONFIGS,
   HISTORY_STORE_CONFIG,
+  ACCESS_CONFIGS,
   RATE_LIMIT_CONFIGS,
   TOKEN_VALIDATION_CONFIGS,
   MOCK_SERVER_CONFIGS,

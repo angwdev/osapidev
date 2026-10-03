@@ -161,6 +161,8 @@ services:
       VITE_APP_PRIVACY_POLICY_LINK: ${VITE_APP_PRIVACY_POLICY_LINK:-}
       # Single sign-on through Authentik (applied on first start and whenever these change)
       VITE_ALLOWED_AUTH_PROVIDERS: ${OSAPIDEV_AUTH_PROVIDERS:-OIDC}
+      # Visitors must sign in; with SSO as the only method they go straight to Authentik
+      REQUIRE_LOGIN: ${OSAPIDEV_REQUIRE_LOGIN:-true}
       OIDC_ISSUER: https://${AUTHENTIK_HOST}/application/o/osapidev/
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?OIDC_CLIENT_ID is required}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?OIDC_CLIENT_SECRET is required}

@@ -283,6 +283,15 @@ export type AuthPlatformDef = {
   getAllowedAuthProviders: () => Promise<E.Either<string, string[]>>
 
   /**
+   * Whether the instance requires visitors to sign in before using the app,
+   * along with the login methods available to do so.
+   * Platforms that never require sign-in leave this undefined.
+   */
+  getLoginRequirement?: () => Promise<
+    E.Either<string, { requireLogin: boolean; providers: string[] }>
+  >
+
+  /**
    * Defines the additional login items that should be shown in the login screen
    */
   additionalLoginItems?: LoginItemDef[]
