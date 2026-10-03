@@ -63,6 +63,15 @@ You can also set these from the environment instead of the dashboard: `OIDC_ISSU
 
 Users are matched to existing accounts by email. Logins are refused when the provider marks the email as unverified (`email_verified: false`). If the issuer can't be reached when the server starts, SSO login returns `503 auth/oidc_provider_unavailable` (the reason is in the server log) and every other login method keeps working.
 
+### Require sign-in
+
+By default anyone can use the app without an account (their work stays in the browser). To make visitors sign in first, turn on **Settings → Auth providers → Access → Require sign-in to use the app** in the admin dashboard, or set `REQUIRE_LOGIN=true` in the environment.
+
+- Visitors who aren't signed in get a **Sign in to continue** page. When single sign-on (OIDC, Google, GitHub or Microsoft) is the only login method, they're sent straight to the provider instead.
+- After signing out, the page waits for the user to click **Login**, so they aren't signed straight back in through the provider's session.
+- Share links (`/r/...`) only open for signed-in users. Published documentation (`/view/...`) stays public.
+- User data was already protected by the server. This setting also closes the app itself to anonymous use.
+
 ### Teams, shared collections and roles
 
 Team workspaces, shared team collections, requests and environments, and per-team roles (**Owner**, **Editor**, **Viewer**, enforced by the server) are built in. Create teams from the app's workspace switcher, or manage them under **Teams** in the admin dashboard.

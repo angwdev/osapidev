@@ -389,4 +389,8 @@ export class AuthService {
   getAuthProviders() {
     return this.infraConfigService.getAllowedAuthProviders();
   }
+
+  isLoginRequired() {
+    return this.infraConfigService.isLoginRequired();
+  }
 }

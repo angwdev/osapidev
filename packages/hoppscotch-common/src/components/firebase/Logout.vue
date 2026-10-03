@@ -23,6 +23,7 @@ import IconLogOut from "~icons/lucide/log-out"
 import { useToast } from "@composables/toast"
 import { useI18n } from "@composables/i18n"
 import { platform } from "~/platform"
+import { noteExplicitSignOut } from "~/helpers/login-gate"
 import { defineActionHandler } from "~/helpers/actions"
 import { useRouter } from "vue-router"
 
@@ -50,6 +51,7 @@ const router = useRouter()
 
 const logout = async () => {
   try {
+    noteExplicitSignOut()
     await platform.auth.signOutUser()
     toast.success(`${t("auth.logged_out")}`)
 

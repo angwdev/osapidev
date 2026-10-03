@@ -541,6 +541,14 @@ export class InfraConfigService implements OnModuleInit, OnModuleDestroy {
    * Get allowed auth providers for login/signup
    * @returns string[]
    */
+  /**
+   * Whether visitors must sign in before using the app
+   * @returns boolean
+   */
+  isLoginRequired() {
+    return this.configService.get<string>('INFRA.REQUIRE_LOGIN') === 'true';
+  }
+
   getAllowedAuthProviders() {
     return (
       this.configService
@@ -803,6 +811,7 @@ export class InfraConfigService implements OnModuleInit, OnModuleDestroy {
         case InfraConfigEnum.MAILER_SMTP_SECURE:
         case InfraConfigEnum.MAILER_TLS_REJECT_UNAUTHORIZED:
         case InfraConfigEnum.MAILER_SMTP_IGNORE_TLS:
+        case InfraConfigEnum.REQUIRE_LOGIN:
           if (value !== 'true' && value !== 'false') return fail();
           break;
 

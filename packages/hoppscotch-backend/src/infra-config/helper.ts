@@ -20,6 +20,7 @@ export enum ServiceStatus {
 const SYNC_ONLY_VARIABLES = [
   InfraConfigEnum.PROXY_APP_URL,
   InfraConfigEnum.VITE_ALLOWED_AUTH_PROVIDERS,
+  InfraConfigEnum.REQUIRE_LOGIN,
   InfraConfigEnum.OIDC_ISSUER,
   InfraConfigEnum.OIDC_CLIENT_ID,
   InfraConfigEnum.OIDC_CLIENT_SECRET,
@@ -389,6 +390,12 @@ export async function getDefaultInfraConfigs(): Promise<DefaultInfraConfig[]> {
     },
     {
       name: InfraConfigEnum.VITE_ALLOWED_AUTH_PROVIDERS,
+      value: null,
+      isEncrypted: false,
+    },
+    {
+      // null = not required; left unset so a REQUIRE_LOGIN env var applies on first start
+      name: InfraConfigEnum.REQUIRE_LOGIN,
       value: null,
       isEncrypted: false,
     },
