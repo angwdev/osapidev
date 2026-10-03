@@ -13,6 +13,7 @@ import { ShortcodeService } from './shortcode.service';
 import { throwErr } from 'src/utils';
 import { GqlUser } from 'src/decorators/gql-user.decorator';
 import { GqlAuthGuard } from 'src/guards/gql-auth.guard';
+import { GqlLoginRequiredGuard } from 'src/guards/gql-login-required.guard';
 import { User } from 'src/user/user.model';
 import { PubSubService } from 'src/pubsub/pubsub.service';
 import { AuthUser } from '../types/AuthUser';
@@ -33,6 +34,7 @@ export class ShortcodeResolver {
     description: 'Resolves and returns a shortcode data',
     nullable: true,
   })
+  @UseGuards(GqlLoginRequiredGuard)
   async shortcode(
     @Args({
       name: 'code',

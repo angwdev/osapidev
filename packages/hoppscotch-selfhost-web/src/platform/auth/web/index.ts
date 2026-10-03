@@ -11,7 +11,11 @@ import {
 } from "@hoppscotch/common/platform/auth"
 import { PersistenceService } from "@hoppscotch/common/services/persistence"
 
-import { getAllowedAuthProviders, updateUserDisplayName } from "./api"
+import {
+  getAllowedAuthProviders,
+  getLoginRequirement,
+  updateUserDisplayName,
+} from "./api"
 
 export const authEvents$ = new Subject<AuthEvent | { event: "token_refresh" }>()
 const currentUser$ = new BehaviorSubject<HoppUser | null>(null)
@@ -380,6 +384,7 @@ export const def: AuthPlatformDef = {
     }
   },
   getAllowedAuthProviders,
+  getLoginRequirement,
 
   /**
    * Verifies if the current user's authentication tokens are valid

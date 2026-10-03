@@ -15,7 +15,11 @@ import { KernelInterceptorService } from "@hoppscotch/common/services/kernel-int
 import { CookieJarService } from "@hoppscotch/common/services/cookie-jar.service"
 
 import Login from "@app/components/Login.vue"
-import { getAllowedAuthProviders, updateUserDisplayName } from "./api"
+import {
+  getAllowedAuthProviders,
+  getLoginRequirement,
+  updateUserDisplayName,
+} from "./api"
 
 export type HoppUserWithAuthDetail = {
   uid: string
@@ -382,6 +386,10 @@ export const def: AuthPlatformDef = {
 
   async getAllowedAuthProviders() {
     return await getAllowedAuthProviders()
+  },
+
+  async getLoginRequirement() {
+    return await getLoginRequirement()
   },
 
   getBackendHeaders() {

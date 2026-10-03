@@ -116,6 +116,7 @@ import { GetMyTeamsQuery } from "~/helpers/backend/graphql"
 import { useToast } from "~/composables/toast"
 import { deleteUser } from "~/helpers/backend/mutations/Profile"
 import { platform } from "~/platform"
+import { noteExplicitSignOut } from "~/helpers/login-gate"
 
 const t = useI18n()
 const toast = useToast()
@@ -181,6 +182,7 @@ const deleteUserAccount = async () => {
         deletingUser.value = false
         showDeleteAccountModal.value = false
         toast.success(t("settings.account_deleted"))
+        noteExplicitSignOut()
         platform.auth.signOutUser()
         router.push(`/`)
       }

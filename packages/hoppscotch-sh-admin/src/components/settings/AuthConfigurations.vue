@@ -64,6 +64,12 @@
         </div>
       </HoppSmartTab>
 
+      <HoppSmartTab id="access" :label="t('configs.access.tab')">
+        <div class="pb-8 px-4">
+          <SettingsLoginRequirement v-model:config="workingConfigs" />
+        </div>
+      </HoppSmartTab>
+
       <HoppSmartTab
         id="token"
         :label="t('configs.auth_providers.token.title')"

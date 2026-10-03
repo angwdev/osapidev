@@ -27,6 +27,13 @@
     "smtp_required": "SMTP must be enabled and configured to use email based authentication."
   },
   "configs": {
+    "access": {
+      "description": "Control who can use the osapidev app",
+      "require_login": "Require sign-in to use the app",
+      "require_login_note": "Visitors are sent to sign in before they can use the app, and share links only open for signed-in users. Published documentation stays public.",
+      "tab": "Access",
+      "title": "Access"
+    },
     "auth_providers": {
       "auth_provider_config": "Authentication Configurations",
       "auth_provider_description": "Set up authentication methods for your osapidev instance using OAuth or Email.",

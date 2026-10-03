@@ -43,7 +43,7 @@ export class AuthController {
   @Get('providers')
   async getAuthProviders() {
     const providers = await this.authService.getAuthProviders();
-    return { providers };
+    return { providers, requireLogin: this.authService.isLoginRequired() };
   }
 
   /**
