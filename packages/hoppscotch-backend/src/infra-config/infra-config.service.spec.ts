@@ -566,3 +566,45 @@ describe('InfraConfigService', () => {
     });
   });
 });
+
+describe('completeOnboardingIfProvidersConfigured', () => {
+  const rows = (providers: string | null, completed: string | null) =>
+    [
+      { name: InfraConfigEnum.VITE_ALLOWED_AUTH_PROVIDERS, value: providers },
+      { name: InfraConfigEnum.ONBOARDING_COMPLETED, value: completed },
+    ] as dbInfraConfig[];
+
+  const run = () =>
+    (infraConfigService as any).completeOnboardingIfProvidersConfigured();
+
+  beforeEach(() => mockReset(mockPrisma));
+
+  test('marks onboarding complete when providers come from the environment', async () => {
+    mockPrisma.infraConfig.findMany.mockResolvedValueOnce(
+      rows('OIDC', 'false'),
+    );
+
+    await run();
+
+    expect(mockPrisma.infraConfig.update).toHaveBeenCalledWith({
+      where: { name: InfraConfigEnum.ONBOARDING_COMPLETED },
+      data: { value: 'true' },
+    });
+  });
+
+  test('leaves onboarding pending while no providers are configured', async () => {
+    mockPrisma.infraConfig.findMany.mockResolvedValueOnce(rows(null, 'false'));
+
+    await run();
+
+    expect(mockPrisma.infraConfig.update).not.toHaveBeenCalled();
+  });
+
+  test('does nothing when onboarding is already complete', async () => {
+    mockPrisma.infraConfig.findMany.mockResolvedValueOnce(rows('OIDC', 'true'));
+
+    await run();
+
+    expect(mockPrisma.infraConfig.update).not.toHaveBeenCalled();
+  });
+});
